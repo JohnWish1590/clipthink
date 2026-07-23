@@ -1,0 +1,30 @@
+# 运行日志
+log.txt
+
+# 单实例原子锁（程序自动管理）
+.sender.lock
+.reader.lock
+
+# Python 缓存
+__pycache__/
+*.pyc
+
+# 内部交接文档（非软件源码）
+HANDOFF.md
+
+# 旧版 / 历史修复 / 运维脚本（非核心主流程）
+send_clipboard.py
+send_to_workbuddy.ps1
+WorkBuddySender.ahk
+WorkBuddySender.bat
+WorkBuddySender.vbs
+fix_*.py
+make_*.py
+*_shortcut.py
+update_all_shortcuts.py
+clean_inbox.py
+fix_encoding.py
+test_*.py
+add_to_startup.py
+register_context_menu.py
+unregister_context_menu.py
