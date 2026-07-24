@@ -25,6 +25,19 @@ from datetime import datetime
 
 # ---------- 单实例锁文件：必须在导入 tkinter/PIL/pystray 之前检测，否则重复实例会卡在重型导入 ----------
 LOCK_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".sender.lock")
+# 命令文件：已在运行的实例通过它接收其它启动参数（桌面快捷方式带 --open-reader / --open-inbox 时）
+CMD_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".sender.cmd")
+
+
+def _parse_action_arg():
+    """从命令行解析动作参数（供桌面快捷方式带动作启动）。"""
+    for a in sys.argv[1:]:
+        if a in ("--open-reader", "--open-inbox"):
+            return a
+    return None
+
+
+REQUESTED_ACTION = _parse_action_arg()
 
 
 def _pid_alive(pid):
@@ -49,6 +62,13 @@ def _early_sender_guard():
         except Exception:
             pass
         if pid is None or _pid_alive(pid):
+            # 已在运行且本次带动作参数：把动作写入命令文件，交给运行实例处理
+            if REQUESTED_ACTION:
+                try:
+                    with open(CMD_FILE, "w", encoding="utf-8") as cf:
+                        cf.write(REQUESTED_ACTION)
+                except Exception:
+                    pass
             os._exit(0)  # 重复实例：静默强制退出，不导入重型模块
         else:
             # 锁是僵尸（上次崩溃残留），接管：直接覆盖写入（避免 os.remove 被沙箱拦截）
@@ -510,7 +530,87 @@ READER_SCRIPT = os.path.join(BASE_DIR, "clipthink_reader.pyw")
 READER_URL = "http://127.0.0.1:8765/"
 
 
+def _default_browser():
+    """探测默认浏览器，返回 (exe_path, brand)；brand ∈ {chrome, edge, firefox, other}。
+    失败返回 (None, None)。"""
+    try:
+        import winreg
+        progid = None
+        # 1) 取 UserChoice 的 ProgId（当前用户实际默认）
+        try:
+            key = winreg.OpenKey(
+                winreg.HKEY_CURRENT_USER,
+                r"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\https\UserChoice",
+            )
+            progid, _ = winreg.QueryValueEx(key, "ProgId")
+            winreg.CloseKey(key)
+        except Exception:
+            pass
+        # 2) 从 ProgId 读 open 命令，提取 exe 路径
+        exe = None
+        if progid:
+            try:
+                key = winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, rf"{progid}\shell\open\command")
+                cmd, _ = winreg.QueryValueEx(key, "")
+                winreg.CloseKey(key)
+                m = re.search(r'"([^"]+\.exe)"', cmd)
+                if m and os.path.exists(m.group(1)):
+                    exe = m.group(1)
+            except Exception:
+                exe = None
+        # 3) 回退：遍历 StartMenuInternet 注册的浏览器
+        if not exe or not os.path.exists(exe):
+            try:
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r"SOFTWARE\Clients\StartMenuInternet")
+                i = 0
+                while True:
+                    name = winreg.EnumKey(key, i)
+                    i += 1
+                    try:
+                        sub = winreg.OpenKey(key, rf"{name}\shell\open\command")
+                        cmd, _ = winreg.QueryValueEx(sub, "")
+                        winreg.CloseKey(sub)
+                        m = re.search(r'"([^"]+\.exe)"', cmd)
+                        if m and os.path.exists(m.group(1)):
+                            exe = m.group(1)
+                            break
+                    except Exception:
+                        continue
+                winreg.CloseKey(key)
+            except Exception:
+                pass
+        if not exe or not os.path.exists(exe):
+            return None, None
+        low = exe.lower()
+        if "msedge" in low:
+            brand = "edge"
+        elif "chrome" in low:
+            brand = "chrome"
+        elif "firefox" in low:
+            brand = "firefox"
+        else:
+            brand = "other"
+        return exe, brand
+    except Exception:
+        return None, None
+
+
 def _open_reader_browser():
+    """用默认浏览器打开纯净应用窗口：Chrome/Edge 用 --app=<url>（无地址栏/标签栏），
+    其它/探测失败降级为系统默认打开（塞入现有浏览器标签页或新窗口）。"""
+    try:
+        exe, brand = _default_browser()
+        if exe and brand in ("chrome", "edge"):
+            subprocess.Popen([exe, f"--app={READER_URL}"], creationflags=CREATE_NO_WINDOW)
+            log_info(f"已用 {brand} 纯净应用窗口打开阅读器：{exe}")
+            return True
+        if exe and brand == "firefox":
+            subprocess.Popen([exe, "--new-window", READER_URL], creationflags=CREATE_NO_WINDOW)
+            log_info(f"已用 firefox 新窗口打开阅读器：{exe}")
+            return True
+    except Exception as e:
+        log_err(f"探测/启动浏览器失败，回退默认打开：{e}")
+    # 其它或探测失败：回退系统默认打开
     try:
         os.startfile(READER_URL)
         return True
@@ -711,6 +811,30 @@ def quit_app(icon, item):
         pass
 
 
+# ---------- 命令文件监听（接收其它启动实例通过 IPC 转交的动作）----------
+def _cmd_listener():
+    """监听命令文件 .sender.cmd：桌面快捷方式带 --open-reader / --open-inbox 启动时，
+    若主程序已在运行，重复实例会把动作写入此文件；本线程检测到即执行，并删除文件防重复触发。"""
+    while True:
+        try:
+            if os.path.exists(CMD_FILE):
+                with open(CMD_FILE, "r", encoding="utf-8") as cf:
+                    action = cf.read().strip()
+                try:
+                    os.remove(CMD_FILE)
+                except Exception:
+                    pass
+                if action == "--open-reader":
+                    log_info("收到命令文件：打开阅读器")
+                    threading.Thread(target=open_reader, args=(None, None), daemon=True).start()
+                elif action == "--open-inbox":
+                    log_info("收到命令文件：打开收件箱")
+                    threading.Thread(target=open_inbox, args=(None, None), daemon=True).start()
+        except Exception as e:
+            log_err(f"命令监听异常：{e}")
+        time.sleep(0.3)
+
+
 # ---------- 主流程 ----------
 def main():
     log_info("启动全局热键线程")
@@ -720,6 +844,15 @@ def main():
     threading.Thread(target=ensure_serve, daemon=True).start()
     # 每小时自动分析收件箱（静默；仅有待分析项时才真正提交）
     threading.Thread(target=_hourly_timer, daemon=True).start()
+    # 监听桌面快捷方式通过命令文件转交的动作（主程序已在运行时，重复实例写入 .sender.cmd）
+    threading.Thread(target=_cmd_listener, daemon=True).start()
+    # 若本次是带动作参数启动（桌面快捷方式指向主程序），启动后执行对应动作
+    if REQUESTED_ACTION == "--open-reader":
+        threading.Thread(target=open_reader, args=(None, None), daemon=True).start()
+    elif REQUESTED_ACTION == "--open-inbox":
+        threading.Thread(target=open_inbox, args=(None, None), daemon=True).start()
+    # 退出时清理命令文件
+    atexit.register(lambda: os.path.exists(CMD_FILE) and os.remove(CMD_FILE))
     combo = load_hotkey_combo()
     icon = Icon(
         "ClipThink",
