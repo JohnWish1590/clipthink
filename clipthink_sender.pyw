@@ -652,6 +652,33 @@ def _snap_reader_window(side="right", timeout=5.0):
     threading.Thread(target=_run, daemon=True).start()
 
 
+def _set_window_icon(root):
+    """给 tkinter 窗口设置任务栏/标题栏图标；支持 .ico，失败则静默回退。"""
+    if not os.path.exists(ICO_FILE):
+        return
+    try:
+        # 方式1：直接加载 ICO（Windows 原生支持）
+        root.iconbitmap(ICO_FILE)
+        return
+    except Exception:
+        pass
+    try:
+        # 方式2：通过 wm_iconbitmap 显式设置
+        root.wm_iconbitmap(ICO_FILE)
+        return
+    except Exception:
+        pass
+    try:
+        # 方式3：用 PhotoImage 加载 PNG 副本作为窗口图标（非任务栏，仅标题栏）
+        png = os.path.join(BASE_DIR, "clipthink_icon.png")
+        if os.path.exists(png):
+            icon = tk.PhotoImage(file=png)
+            root.iconphoto(True, icon)
+            root._ct_icon_ref = icon  # 防止被 GC
+    except Exception:
+        pass
+
+
 def _ask_choice(title, message, options, remember_default=True, default_value=""):
     """弹出单选对话框。options=[(label, value),...]，返回 (value, remember)。"""
     result = {"value": default_value, "remember": remember_default}
@@ -659,14 +686,10 @@ def _ask_choice(title, message, options, remember_default=True, default_value=""
 
     def _run():
         root = tk.Tk()
+        _set_window_icon(root)
         root.title(title)
         root.attributes("-topmost", True)
         root.resizable(False, False)
-        if os.path.exists(ICO_FILE):
-            try:
-                root.iconbitmap(ICO_FILE)
-            except Exception:
-                pass
         tk.Label(root, text=message, wraplength=360, justify="left").pack(padx=20, pady=(14, 8))
         var = tk.StringVar(value=result["value"])
         for label, value in options:
@@ -700,14 +723,10 @@ def _ask_yes_no_remember(title, message, default_yes=True, remember_default=True
 
     def _run():
         root = tk.Tk()
+        _set_window_icon(root)
         root.title(title)
         root.attributes("-topmost", True)
         root.resizable(False, False)
-        if os.path.exists(ICO_FILE):
-            try:
-                root.iconbitmap(ICO_FILE)
-            except Exception:
-                pass
         tk.Label(root, text=message, wraplength=360, justify="left").pack(padx=20, pady=(14, 8))
         yes_var = tk.BooleanVar(value=default_yes)
         rem_var = tk.BooleanVar(value=remember_default)

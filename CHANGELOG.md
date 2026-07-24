@@ -110,7 +110,31 @@
 
 ---
 
+## Release Notes（v1.0.8）
+
+> 本小节为 GitHub Release **v1.0.8** 的正文，供发布时直接引用。
+
+**剪思盒 ClipThink** v1.0.8 进一步净化桌面图标，并修复首次退出确认对话框仍显示默认图标的问题。
+
+**本次更新**
+- 重新生成 `clipthink.ico` / `clipthink_icon.png`：只保留棕色 CT 线条本身，去掉原始截图中的白色圆角矩形底板与外围阴影，让桌面图标更紧凑、更贴近「铜线工艺」原设计。
+- 修复 tkinter 对话框图标加载：新增 `_set_window_icon()` 统一封装 `iconbitmap` / `wm_iconbitmap` / `iconphoto` 三种回退方式，确保首次退出托盘时「是否同时关闭阅读器？」确认框正确显示剪思盒图标，不再回退到默认 feather 图标。
+
+**已验证**：`clipthink_sender.pyw`、`clipthink_reader.pyw`、`make_desktop_shortcut.py` 三个脚本 `py_compile` 通过；桌面快捷方式目标已确认指向 `clipthink.ico`。
+
+**如何安装**：已安装用户 `git pull` 后重新运行 `make_desktop_shortcut.py` 刷新桌面图标；托盘发送端需要退出重开才能加载新图标与对话框图标逻辑。
+
+---
+
 ## [Unreleased]
+
+## [1.0.8] - 2026-07-24
+
+### Changed
+- 重新生成 `clipthink.ico` / `clipthink_icon.png`：仅保留棕色 CT 线条，去除白色圆角底板与阴影。
+
+### Fixed
+- 首次退出托盘时的确认对话框可能仍显示默认 feather 图标；现通过 `_set_window_icon()` 多方式回退加载 `clipthink.ico`，确保剪思盒图标生效。
 
 ## [1.0.7] - 2026-07-24
 
