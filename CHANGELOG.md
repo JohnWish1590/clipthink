@@ -8,6 +8,36 @@
 
 ---
 
+## Release Notes（v1.0.2）
+
+> 本小节为 GitHub Release **v1.0.2** 的正文，供发布时直接引用。
+
+**剪思盒 ClipThink** v1.0.2 主要是 v1.0.1 品牌重命名的收尾补丁。
+
+**本次更新**
+- 右键上下文菜单（资源管理器对文件右键「发送到…」）注册表键 `SendToWorkBuddy` → `SendToClipThink`，显示文案改为「发送到 剪思盒 分析」。
+- 同步更新卸载脚本键名，确保旧键可被正确移除、无残留。
+- 清理 `clipthink_sender.ahk` / `clipthink_sender.vbs` 及 `make_reader_shortcut.py` 内的旧品牌注释。
+
+**已验证**：本机重注册后新键生效、旧键消失；三个 Python 脚本 `py_compile` 通过。
+
+**如何安装**：见仓库 README 的「部署与安装」章节。若已安装 v1.0.1，直接拉取最新代码并重新运行 `register_context_menu.py` 即可刷新右键菜单。
+
+---
+
+## [Unreleased]
+
+## [1.0.2] - 2026-07-23
+
+### Fixed
+- 右键上下文菜单注册表键 `SendToWorkBuddy` → `SendToClipThink`，显示文案「发送到 剪思盒 分析」（用户可见旧品牌收尾）。
+- 卸载脚本键名同步，确保旧键可正确卸载、无残留。
+
+### Changed
+- 清理 `clipthink_sender.ahk` / `clipthink_sender.vbs` / `make_reader_shortcut.py` 内残留的旧品牌注释。
+
+---
+
 ## Release Notes（v1.0.1）
 
 > 本小节为 GitHub Release **v1.0.1** 的正文，供发布时直接引用。
