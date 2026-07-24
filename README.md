@@ -29,7 +29,7 @@
 
 | 必要性 | 依赖 | 说明 |
 |---|---|---|
-| 【必需】 | **Python 3.10+** | 并安装依赖：`pip install pystray pillow`；发送端以 `pythonw` 后台运行。这是唯一核心依赖。 |
+| 【必需】 | **Python 3.10+** | 并安装依赖：`pip install pystray pillow pywin32`；发送端以 `pythonw` 后台运行。这是唯一核心依赖。`pywin32` 用于系统托盘与桌面快捷方式创建。 |
 | 【可选】 | **WorkBuddy 桌面端** | **仅「AI 分析收件箱」功能需要**其自带的 `codebuddy` CLI（路径 `C:\Program Files\WorkBuddy\resources\app.asar.unpacked\cli\bin\codebuddy`）。未安装时，你仍然可以热键发送剪贴板到收件箱、用本地阅读器查看内容，只是没有 AI 自动分析。 |
 | 【可选】 | **Node.js** | 仅在使用 WorkBuddy 分析服务时需要；发送端用它拉起 `codebuddy` serve，需加入 `PATH` 或位于 `C:\Program Files\nodejs`。 |
 | 【可选】 | **Git** | 仅用于 clone 仓库（也可直接下载 ZIP）。 |
@@ -37,7 +37,8 @@
 ### 2.3 快速开始（3 步）
 
 1. **获取代码**：克隆 / 下载本仓库到本地（如 `C:\Users\user\ClipThink`）。
-2. **启动发送端**：双击桌面「剪思盒」快捷方式（或仓库里的 `clipthink_sender.pyw`）启动；右下角出现托盘图标即成功。首次打开阅读器时会询问放在屏幕左侧还是右侧。
+2. **创建桌面快捷方式（仅首次）**：若桌面还没有「剪思盒」图标，在仓库目录运行一次 `python make_desktop_shortcut.py`，即可生成指向 `clipthink_sender.pyw` 并带 `--open-reader` 参数的「剪思盒.lnk」（图标取自 `clipthink.ico`）。
+3. **启动发送端**：双击桌面「剪思盒」快捷方式启动；右下角出现托盘图标即成功。首次打开阅读器时会询问放在屏幕左侧还是右侧。
 3. **打开阅读器**：双击桌面「剪思盒」图标会同时打开托盘 + 阅读器；也可托盘右键「打开阅读器」，或浏览器访问 `http://127.0.0.1:8765/`。阅读器默认占主屏幕半屏、贴左/右边缘显示。
 
 > 收件箱目录 `C:\Users\user\ClipThinkInbox` 会在首次发送时自动创建，无需手动建目录。
@@ -60,7 +61,7 @@
 | **托盘右键「立即执行」** | 等同热键，手动触发一次"发送当前剪贴板"。 | 系统托盘 → 右键菜单 |
 | **托盘右键「分析收件箱」** | 立即让 WorkBuddy 分析收件箱里所有"未分析"的条目，分析完成后弹提示。 | 系统托盘 → 右键菜单 |
 | **每小时自动分析** | 后台定时器每小时跑一次；仅当存在"未分析"条目时才真正提交，静默不弹窗。 | 自动（无需操作） |
-| **系统托盘常驻** | 蓝紫渐变"对话气泡"图标常驻右下角，悬停显示「剪思盒 - 运行中 (当前热键)」。 | 启动即常驻 |
+| **系统托盘常驻** | 棕色「CT」图标（见仓库 `clipthink.ico`）常驻右下角，悬停显示「剪思盒 - 运行中 (当前热键)」。 | 启动即常驻 |
 | **鼠标旁轻量提示（toast）** | 发送成功/失败、分析完成等，在鼠标旁弹"已发送/分析完成"小卡片（绿=成功，红=失败），约 0.6–2.2 秒自动消失。 | 自动（随动作触发） |
 | **本地网页阅读器** | 左右两栏：左=条目列表（是否已分析），右=原文 + 分析结果；支持 Markdown / 图片渲染、自动刷新。 | 托盘「打开阅读器」/ 浏览器访问 8765 |
 | **继续讨论（追问）** | 在阅读器里针对某条写下问题 → 自动把"原文+之前分析+你的问题"写入收件箱并复制到剪贴板，再触发分析即可看到回复。 | 阅读器内「发到 WorkBuddy 讨论」 |
@@ -84,7 +85,7 @@
 | `log.txt` | 发送端运行日志（启动、热键触发、发送成败、分析服务状态等），排查第一手资料。 |
 | `send_clipboard.py` | **旧版备用发送脚本**，当前主流程已把发送逻辑内嵌到 `clipthink_sender.pyw`，此文件不再被主流程调用，仅作备份保留。 |
 | `send_to_clipthink.ps1` | **旧版 PowerShell 发送脚本**，已被内嵌逻辑取代，不再被主流程使用。 |
-| `register_context_menu.py` / `unregister_context_menu.py` | 用于在资源管理器右键菜单注册/卸载「发送到 WorkBuddy 分析」（文件级发送入口，独立于热键）。 |
+| `register_context_menu.py` / `unregister_context_menu.py` | 用于在资源管理器右键菜单注册/卸载「发送到 剪思盒 分析」（文件级发送入口，独立于热键）。 |
 | 其它 `*.py`（如 `add_to_startup.py`、`make_*_shortcut.py`、`fix_*.py`、`test_*.py`、`clean_inbox.py`、`update_all_shortcuts.py`） | 辅助/运维脚本：开机自启、生成桌面快捷方式、历史修复与自检。**正常使用无需关心**，详见第七、八节。 |
 
 ### 4.2 模块依赖与数据流（Mermaid）
@@ -135,7 +136,7 @@ flowchart LR
 3. 鼠标旁闪现**绿色「已发送」**小卡片（约 0.6 秒消失）即成功；
 4. 内容写入收件箱：文字 → `YYYYMMDD_HHMMSS.md`；图片 → 同名的 `.png` + 引用它的 `.md`。
 
-> 小贴士：在微信 / 浏览器里"选中文字 → 右键"弹出的是应用自己的菜单，Windows 系统右键抓不到那段选中文字；所以**纯文字最顺手的做法是"复制后按热键"**。文件级发送可用资源管理器右键菜单「发送到 WorkBuddy 分析」（`register_context_menu.py` 注册）。
+> 小贴士：在微信 / 浏览器里"选中文字 → 右键"弹出的是应用自己的菜单，Windows 系统右键抓不到那段选中文字；所以**纯文字最顺手的做法是"复制后按热键"**。文件级发送可用资源管理器右键菜单「发送到 剪思盒 分析」（`register_context_menu.py` 注册）。
 
 ### 5.2 托盘菜单每一项说明
 
@@ -148,6 +149,7 @@ flowchart LR
 | **打开运行日志** | 用默认程序打开 `log.txt`，排查问题用。 |
 | **打开收件箱** | 打开资源管理器定位到 `C:\Users\user\ClipThinkInbox`。 |
 | **打开阅读器** | 启动阅读器后端（若未运行）并打开浏览器访问 `http://127.0.0.1:8765/`。 |
+| **设置** | 修改阅读器默认贴屏幕左/右，以及"退出时是否同时关闭阅读器"的偏好（与首次使用时的询问等效）。 |
 | **退出** | 关闭发送端（托盘图标消失，停止热键与分析定时器）。 |
 
 ### 5.3 阅读器用法
@@ -232,8 +234,8 @@ flowchart LR
 
 **辅助 / 运维脚本（可选）**
 - `add_to_startup.py` — 配置开机自启。
-- `make_reader_shortcut.py` / `make_desktop_*.py` / `fix_desktop_lnk*.py` — 生成 / 修复桌面与阅读器快捷方式。
-- `register_context_menu.py` / `unregister_context_menu.py` — 注册 / 卸载资源管理器右键菜单「发送到 WorkBuddy 分析」。
+- `make_desktop_shortcut.py` / `fix_desktop_lnk*.py` — 生成 / 修复桌面「剪思盒」快捷方式。
+- `register_context_menu.py` / `unregister_context_menu.py` — 注册 / 卸载资源管理器右键菜单「发送到 剪思盒 分析」。
 - `fix_*.py`、`update_all_shortcuts.py`、`clean_inbox.py`、`fix_encoding.py` — 历史修复与清理脚本。
 - `test_send.py` / `test_reader_api.py` — 自检脚本。
 
@@ -301,7 +303,7 @@ flowchart LR
 ## 十一、关于与版权
 
 - **名称**：剪思盒 (ClipThink)
-- **版本**：1.0.6
+- **版本**：1.0.8
 - **作者**：微博@下一站澳门
 - **源码**：https://github.com/JohnWish1590/clipthink
 - **许可证**：本仓库为公开仓库，任何人可免费下载、安装、使用（仅供个人学习与非商业用途）。

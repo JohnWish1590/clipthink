@@ -16,6 +16,9 @@ HANDOFF.md
 ClipThinkInbox/
 **/.workbuddy/
 
+# 运行时用户偏好（程序自动生成，含本机阅读器贴边/退出行为设置）
+clipthink.json
+
 # 旧版 / 历史修复 / 运维脚本（非核心主流程，仍忽略）
 send_clipboard.py
 send_to_workbuddy.ps1

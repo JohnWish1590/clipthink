@@ -11,7 +11,15 @@ except ImportError:
     sys.exit("NEED_PYWIN32")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PYTHONW = r"C:\Users\user\.workbuddy\binaries\python\envs\shortcut\Scripts\pythonw.exe"
+# 用运行本脚本的同一套 Python 的 pythonw（前提是已 pip install pystray pillow pywin32）
+_exe = sys.executable
+if _exe.lower().endswith("python.exe"):
+    PYTHONW = _exe[: -len("python.exe")] + "pythonw.exe"
+elif _exe.lower().endswith("pythonw.exe"):
+    PYTHONW = _exe
+else:
+    _cand = os.path.join(os.path.dirname(_exe), "pythonw.exe")
+    PYTHONW = _cand if os.path.exists(_cand) else _exe
 SENDER = os.path.join(BASE_DIR, "clipthink_sender.pyw")
 ICO = os.path.join(BASE_DIR, "clipthink.ico")
 desktop = os.path.join(os.environ["USERPROFILE"], "Desktop")
