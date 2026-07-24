@@ -92,7 +92,37 @@
 
 ---
 
+## Release Notes（v1.0.7）
+
+> 本小节为 GitHub Release **v1.0.7** 的正文，供发布时直接引用。
+
+**剪思盒 ClipThink** v1.0.7 修复阅读器窗口未真正顶格、选择对话框图标不统一、左右选项同时被选中的问题，并按用户提供的代码重新生成更清晰的「CT」矢量风格图标。
+
+**本次更新**
+- 阅读器窗口真正「顶格」：启动 Chrome / Edge 应用窗口后，通过 Windows API `FindWindowW` + `SetWindowPos` 按主显示器**工作区**（已扣除任务栏）精确贴边，左/右半屏各占 50% 宽度、100% 工作区高度，不再受浏览器边框影响。
+- 修复选择对话框默认状态：首次询问阅读器位置时，单选按钮默认选中「右侧」，不再出现左右两个按钮同时被选中的视觉 bug。
+- 图标全面统一：系统托盘图标、桌面快捷方式图标、阅读器网页 favicon、所有 tkinter 对话框图标，全部指向同一个 `clipthink.ico`。
+- 重新生成桌面图标：按用户提供的裁剪/去背代码，从原始「CT」设计图生成带透明背景的多尺寸 ICO（16/32/48/64/128/256），桌面显示更清晰。
+
+**已验证**：`clipthink_sender.pyw`、`clipthink_reader.pyw`、`make_desktop_shortcut.py` 三个脚本 `py_compile` 通过；桌面快捷方式目标已确认带 `--open-reader` 并指向新生成的 `clipthink.ico`。
+
+**如何安装**：已安装用户 `git pull` 后重新运行 `make_desktop_shortcut.py` 刷新桌面快捷方式与图标即可；托盘发送端需要退出重开才能加载新图标与窗口贴边逻辑。
+
+---
+
 ## [Unreleased]
+
+## [1.0.7] - 2026-07-24
+
+### Fixed
+- 阅读器窗口未真正顶格：改用 `SystemParametersInfo(SPI_GETWORKAREA)` 获取工作区，启动后用 `SetWindowPos` 把阅读器精确贴到左/右半屏。
+- 首次询问阅读器位置时，单选按钮默认同时选中的视觉 bug；现在默认选中「右侧」。
+- 系统托盘图标与 tkinter 对话框图标不统一；两者均使用 `clipthink.ico`。
+
+### Changed
+- 按用户提供的代码重新生成 `clipthink.ico` 与 `clipthink_icon.png`，去除白底、保留圆角卡片，尺寸更清晰。
+- `reader.html` 新增 `<link rel="icon" href="/clipthink.ico">`，阅读器窗口/tab 也显示统一图标。
+- `clipthink_reader.pyw` 增加 `/clipthink.ico` 路由，为阅读器页面提供 favicon。
 
 ## [1.0.6] - 2026-07-24
 

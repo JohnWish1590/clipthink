@@ -229,6 +229,16 @@ class Handler(BaseHTTPRequestHandler):
             except Exception:
                 self._send(500, "reader.html missing")
             return
+        if u.path == "/clipthink.ico":
+            ico_path = os.path.join(SCRIPT_DIR, "clipthink.ico")
+            if os.path.isfile(ico_path):
+                try:
+                    with open(ico_path, "rb") as f:
+                        self._send(200, f.read(), "image/x-icon")
+                except Exception:
+                    pass
+            self._send(404, "not found")
+            return
         if u.path == "/api/list":
             self._send(200, json.dumps(list_items(), ensure_ascii=False))
             return

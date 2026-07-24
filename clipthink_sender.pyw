@@ -98,6 +98,7 @@ INBOX = r"C:\Users\user\ClipThinkInbox"
 SEND_SCRIPT = os.path.join(BASE_DIR, "send_clipboard.py")
 HOTKEY_FILE = os.path.join(BASE_DIR, "hotkey.json")
 CONFIG_FILE = os.path.join(BASE_DIR, "clipthink.json")
+ICO_FILE = os.path.join(BASE_DIR, "clipthink.ico")
 DEFAULT_HOTKEY = "ALT+4"
 
 # ---------- 收件箱分析（WorkBuddy 本地 HTTP API / serve 实例）----------
@@ -187,6 +188,29 @@ def make_icon():
     for dx in (48, 60, 72):                                          # 三点
         d.ellipse([dx, 53, dx + 9, 62], fill=(120, 110, 240, 255))
     return img
+
+
+def load_tray_icon():
+    """优先使用用户设计的 clipthink.ico，缺失则回退到程序生成的图标。"""
+    try:
+        if os.path.exists(ICO_FILE):
+            # 取最大可用尺寸，pystray 会自行缩放
+            img = Image.open(ICO_FILE)
+            if getattr(img, "n_frames", 1) > 1:
+                # ICO 含多帧：选择最接近 128x128 的一帧
+                best = img
+                best_diff = abs(img.size[0] - 128)
+                for i in range(img.n_frames):
+                    img.seek(i)
+                    diff = abs(img.size[0] - 128)
+                    if diff < best_diff:
+                        best = img.copy()
+                        best_diff = diff
+                return best.convert("RGBA")
+            return img.convert("RGBA")
+    except Exception as e:
+        log_err(f"加载 clipthink.ico 失败，回退程序图标：{e}")
+    return make_icon()
 
 
 # ---------- 剪贴板发送（内嵌，不依赖外部子进程） ----------
@@ -558,19 +582,79 @@ def _screen_size():
     return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
 
 
+def _work_area():
+    """返回主显示器工作区 (left, top, right, bottom)，已扣除任务栏。"""
+    user32 = ctypes.windll.user32
+    rect = ctypes.wintypes.RECT()
+    user32.SystemParametersInfoW(0x0030, 0, ctypes.byref(rect), 0)  # SPI_GETWORKAREA
+    return rect.left, rect.top, rect.right, rect.bottom
+
+
 def _reader_geometry(side="right"):
     """按「半屏贴边」计算阅读器窗口尺寸与位置。side ∈ {'left','right'}。"""
-    sw, sh = _screen_size()
-    w = sw // 2
-    h = sh
+    left, top, right, bottom = _work_area()
+    work_w = right - left
+    work_h = bottom - top
+    w = work_w // 2
+    h = work_h
     if side == "left":
-        return w, h, 0, 0
-    return w, h, w, 0
+        return w, h, left, top
+    return w, h, left + w, top
 
 
-def _ask_choice(title, message, options, remember_default=True):
+def _find_reader_window():
+    """按窗口标题查找阅读器 Chrome/Edge 应用窗口，返回 HWND 或 None。"""
+    user32 = ctypes.windll.user32
+    found = []
+    target = "剪思盒 ClipThink"
+
+    def _enum_proc(hwnd, _extra):
+        if not user32.IsWindowVisible(hwnd):
+            return True
+        buf = ctypes.create_unicode_buffer(256)
+        user32.GetWindowTextW(hwnd, buf, 256)
+        if target in buf.value:
+            found.append(hwnd)
+            return False  # 找到第一个即可
+        return True
+
+    EnumWindowsProc = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_int, ctypes.POINTER(ctypes.c_int))
+    user32.EnumWindows(EnumWindowsProc(_enum_proc), 0)
+    return found[0] if found else None
+
+
+def _snap_reader_window(side="right", timeout=5.0):
+    """启动后在后台线程里把阅读器窗口精确贴到工作区左/右半屏。"""
+    def _run():
+        deadline = time.time() + timeout
+        hwnd = None
+        while time.time() < deadline:
+            hwnd = _find_reader_window()
+            if hwnd:
+                break
+            time.sleep(0.2)
+        if not hwnd:
+            log_info("未找到阅读器窗口，跳过精确贴边")
+            return
+        left, top, right, bottom = _work_area()
+        work_w = right - left
+        work_h = bottom - top
+        half_w = work_w // 2
+        if side == "left":
+            x, y, w, h = left, top, half_w, work_h
+        else:
+            x, y, w, h = left + half_w, top, half_w, work_h
+        user32 = ctypes.windll.user32
+        # SWP_NOZORDER | SWP_NOACTIVATE = 0x0014
+        user32.SetWindowPos(hwnd, 0, x, y, w, h, 0x0014)
+        log_info(f"阅读器窗口已贴边：{side} ({w}x{h}@{x},{y})")
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+def _ask_choice(title, message, options, remember_default=True, default_value=""):
     """弹出单选对话框。options=[(label, value),...]，返回 (value, remember)。"""
-    result = {"value": "", "remember": remember_default}
+    result = {"value": default_value, "remember": remember_default}
     ev = threading.Event()
 
     def _run():
@@ -578,6 +662,11 @@ def _ask_choice(title, message, options, remember_default=True):
         root.title(title)
         root.attributes("-topmost", True)
         root.resizable(False, False)
+        if os.path.exists(ICO_FILE):
+            try:
+                root.iconbitmap(ICO_FILE)
+            except Exception:
+                pass
         tk.Label(root, text=message, wraplength=360, justify="left").pack(padx=20, pady=(14, 8))
         var = tk.StringVar(value=result["value"])
         for label, value in options:
@@ -614,6 +703,11 @@ def _ask_yes_no_remember(title, message, default_yes=True, remember_default=True
         root.title(title)
         root.attributes("-topmost", True)
         root.resizable(False, False)
+        if os.path.exists(ICO_FILE):
+            try:
+                root.iconbitmap(ICO_FILE)
+            except Exception:
+                pass
         tk.Label(root, text=message, wraplength=360, justify="left").pack(padx=20, pady=(14, 8))
         yes_var = tk.BooleanVar(value=default_yes)
         rem_var = tk.BooleanVar(value=remember_default)
@@ -734,6 +828,7 @@ def _open_reader_browser():
                 "阅读器窗口默认放在屏幕哪一侧？\n（后续可在托盘右键「设置」中修改）",
                 [("左侧", "left"), ("右侧", "right")],
                 remember_default=True,
+                default_value="right",
             )
             side = chosen if chosen else "right"
             if remember or True:  # 首次选择直接记住
@@ -745,6 +840,7 @@ def _open_reader_browser():
                 [exe, f"--app={READER_URL}", f"--window-size={w},{h}", f"--window-position={x},{y}"],
                 creationflags=CREATE_NO_WINDOW,
             )
+            _snap_reader_window(side)
             log_info(f"已用 {brand} 纯净应用窗口打开阅读器：{exe}，位置={side} ({w}x{h}@{x},{y})")
             return True
         if exe and brand == "firefox":
@@ -955,6 +1051,7 @@ def open_settings(icon, item):
         "阅读器窗口默认放在屏幕哪一侧？",
         [("左侧", "left"), ("右侧", "right")],
         remember_default=False,
+        default_value=current_side,
     )
     if chosen:
         cfg["reader_side"] = chosen
@@ -1041,7 +1138,7 @@ def main():
     combo = load_hotkey_combo()
     icon = Icon(
         "ClipThink",
-        make_icon(),
+        load_tray_icon(),
         f"剪思盒 - 运行中 ({combo})",
         Menu(
             MenuItem("立即执行（发送当前剪贴板）", menu_execute),
