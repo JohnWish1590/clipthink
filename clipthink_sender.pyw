@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-WorkBuddy 收件箱热键监听器（Python 版，带系统托盘图标 + 运行日志）
-- 全局热键（可在阅读器里自定义）→ 把剪贴板（文字/图片）发到 WorkBuddy 收件箱
+剪思盒热键监听器（Python 版，带系统托盘图标 + 运行日志）
+- 全局热键（可在阅读器里自定义）→ 把剪贴板（文字/图片）发到 剪思盒
 - 系统托盘常驻图标，右键可「立即执行」/ 打开日志 / 打开收件箱 / 打开阅读器 / 退出
 - 使用 Windows 原生 RegisterHotKey，稳定可靠
 - 所有事件（含错误）写入 log.txt，便于排查
@@ -74,7 +74,7 @@ CREATE_NO_WINDOW = 0x08000000
 # ---------- 路径配置 ----------
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(BASE_DIR, "log.txt")
-INBOX = r"C:\Users\user\WorkBuddyInbox"
+INBOX = r"C:\Users\user\ClipThinkInbox"
 SEND_SCRIPT = os.path.join(BASE_DIR, "send_clipboard.py")
 HOTKEY_FILE = os.path.join(BASE_DIR, "hotkey.json")
 DEFAULT_HOTKEY = "ALT+4"
@@ -89,8 +89,8 @@ ANALYSIS_SESSION_ID = "inbox-analysis"
 ANALYSIS_RUN_TIMEOUT = 180  # 单次分析超时（秒）。注意：serve 的 X-Codebuddy-Run-Timeout 头以毫秒为单位，发送时须 ×1000
 # 严格限定：只写 .done，不污染收件箱；分析控制在 250 字内，避免超长生成卡死
 ANALYSIS_PROMPT = (
-    "你是 WorkBuddy 收件箱分析助手。请执行：\n"
-    "1. 遍历 C:\\Users\\user\\WorkBuddyInbox 下所有扩展名为 .md 但不是 .done 的文件（这些是尚未分析的待处理项）。\n"
+    "你是 剪思盒分析助手。请执行：\n"
+    "1. 遍历 C:\\Users\\user\\ClipThinkInbox 下所有扩展名为 .md 但不是 .done 的文件（这些是尚未分析的待处理项）。\n"
     "2. 对每个文件：\n"
     "   a. 读取全文。文件以 '# 待分析' 开头，其后为原文内容。\n"
     "   b. 用中文做简洁结构化分析（金融投研视角），总字数控制在 250 字以内：要点提炼、关键事实/数据、判断与疑问。\n"
@@ -218,7 +218,7 @@ def _recent_image_hashes(limit=60):
 
 
 def send_clipboard_direct():
-    """把当前剪贴板内容写入 WorkBuddyInbox，返回 md_path 或 None/错误字符串。"""
+    """把当前剪贴板内容写入 ClipThinkInbox，返回 md_path 或 None/错误字符串。"""
     from PIL import ImageGrab
 
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -506,19 +506,49 @@ def open_inbox(icon, item):
         log_err(f"打开收件箱失败：{e}")
 
 
-READER_SCRIPT = os.path.join(BASE_DIR, "WorkBuddyReader.pyw")
+READER_SCRIPT = os.path.join(BASE_DIR, "clipthink_reader.pyw")
+READER_URL = "http://127.0.0.1:8765/"
+
+
+def _open_reader_browser():
+    try:
+        os.startfile(READER_URL)
+        return True
+    except Exception:
+        try:
+            import webbrowser
+            webbrowser.open(READER_URL)
+            return True
+        except Exception as e:
+            log_err(f"打开浏览器失败：{e}")
+            return False
 
 
 def open_reader(icon, item):
     try:
-        # 用当前 pythonw 启动阅读器（端口占用时阅读器会自动只开浏览器）
+        if _port_listening(8765):
+            if _open_reader_browser():
+                log_info("阅读器已在运行，已打开浏览器")
+            return
         pythonw = sys.executable
+        if not pythonw or not os.path.exists(pythonw):
+            pythonw = os.path.join(BASE_DIR, "python.exe")
         subprocess.Popen([pythonw, READER_SCRIPT], creationflags=CREATE_NO_WINDOW)
-        import webbrowser
-        webbrowser.open("http://127.0.0.1:8765/")
-        log_info("已启动/打开阅读器")
+        # 轮询等待服务就绪，最多 5 秒
+        for _ in range(50):
+            if _port_listening(8765):
+                break
+            time.sleep(0.1)
+        if _port_listening(8765):
+            if _open_reader_browser():
+                log_info("已启动/打开阅读器")
+            else:
+                show_toast("阅读器已启动，但无法打开浏览器，请手动访问 127.0.0.1:8765", kind="err")
+        else:
+            show_toast("阅读器服务未能启动，请查看日志", kind="err")
     except Exception as e:
         log_err(f"打开阅读器失败：{e}")
+        threading.Thread(target=show_toast, args=("打开阅读器失败，请查看日志",), kwargs={"kind": "err"}, daemon=True).start()
 
 
 def _port_listening(port):
@@ -692,9 +722,9 @@ def main():
     threading.Thread(target=_hourly_timer, daemon=True).start()
     combo = load_hotkey_combo()
     icon = Icon(
-        "WorkBuddySender",
+        "ClipThink",
         make_icon(),
-        f"WorkBuddy 收件箱 - 运行中 ({combo})",
+        f"剪思盒 - 运行中 ({combo})",
         Menu(
             MenuItem("立即执行（发送当前剪贴板）", menu_execute),
             MenuItem("分析收件箱", analyze_inbox),

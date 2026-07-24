@@ -1,5 +1,5 @@
 <svg viewBox="0 0 680 540" width="100%" role="img">
-<title>WorkBuddySender 功能架构与数据流</title>
+<title>clipthink_sender 功能架构与数据流</title>
 <desc>展示全局热键与托盘如何把剪贴板写入收件箱，分析 serve 如何调用 WorkBuddy 模型产出 .md.done，最终在阅读器展示。</desc>
 <defs>
 <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
@@ -7,7 +7,7 @@
 </marker>
 </defs>
 
-<text x="40" y="36" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">WorkBuddySender 功能架构与数据流</text>
+<text x="40" y="36" font-family="sans-serif" font-size="14" font-weight="500" fill="#2C2C2A">clipthink_sender 功能架构与数据流</text>
 
 <g>
   <rect x="120" y="60" width="200" height="48" rx="8" fill="#FAEEDA" stroke="#BA7517" stroke-width="0.5"/>
@@ -21,7 +21,7 @@
 </g>
 
 <rect x="40" y="140" width="600" height="130" rx="16" fill="#E6F1FB" stroke="#185FA5" stroke-width="0.5"/>
-<text x="60" y="164" font-family="sans-serif" font-size="14" font-weight="500" fill="#0C447C">WorkBuddySender.pyw · 发送端运行时</text>
+<text x="60" y="164" font-family="sans-serif" font-size="14" font-weight="500" fill="#0C447C">clipthink_sender.pyw · 发送端运行时</text>
 <g>
   <rect x="60" y="178" width="180" height="40" rx="8" fill="#FFFFFF" stroke="#185FA5" stroke-width="0.5"/>
   <text x="150" y="202" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#2C2C2A">剪贴板发送</text>
@@ -40,7 +40,7 @@
 </g>
 
 <rect x="40" y="300" width="275" height="120" rx="12" fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
-<text x="60" y="324" font-family="sans-serif" font-size="14" font-weight="500" fill="#3C3489">WorkBuddyInbox/</text>
+<text x="60" y="324" font-family="sans-serif" font-size="14" font-weight="500" fill="#3C3489">ClipThinkInbox/</text>
 <text x="60" y="350" font-family="sans-serif" font-size="12" fill="#5F5E5A">.md 待分析文件</text>
 <text x="60" y="376" font-family="sans-serif" font-size="12" fill="#5F5E5A">.md.done 已分析</text>
 <text x="60" y="402" font-family="sans-serif" font-size="12" fill="#5F5E5A">UTF-8 带 BOM</text>

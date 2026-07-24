@@ -1,4 +1,4 @@
-# WorkBuddy 收件箱阅读器 —— 纯后台 HTTP 服务（无托盘，由发送端管理）
+# 剪思盒 ClipThink —— 纯后台 HTTP 服务（无托盘，由发送端管理）
 # 启动：起本地 HTTP 服务（8765），不弹浏览器、不出托盘。
 # 单实例：原子锁文件保证同时只有一个阅读器。
 import os, sys, re, json, threading, webbrowser, datetime, ctypes, atexit
@@ -67,7 +67,7 @@ def _early_instance_guard(url):
 _early_instance_guard("http://127.0.0.1:8765/")
 
 PORT = 8765
-INBOX = os.path.join(os.environ.get("USERPROFILE", "C:\\"), "WorkBuddyInbox")
+INBOX = os.path.join(os.environ.get("USERPROFILE", "C:\\"), "ClipThinkInbox")
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 HTML_FILE = os.path.join(SCRIPT_DIR, "reader.html")
 IMG_EXT = (".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp")

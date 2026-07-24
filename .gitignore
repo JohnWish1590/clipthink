@@ -12,7 +12,11 @@ __pycache__/
 # 内部交接文档（非软件源码）
 HANDOFF.md
 
-# 旧版 / 历史修复 / 运维脚本（非核心主流程）
+# 用户数据 / 引擎令牌（公开仓库前必须忽略，防止用户 .md 与 codebuddy 令牌入库）
+ClipThinkInbox/
+**/.workbuddy/
+
+# 旧版 / 历史修复 / 运维脚本（非核心主流程，仍忽略）
 send_clipboard.py
 send_to_workbuddy.ps1
 WorkBuddySender.ahk
@@ -25,6 +29,10 @@ update_all_shortcuts.py
 clean_inbox.py
 fix_encoding.py
 test_*.py
-add_to_startup.py
-register_context_menu.py
-unregister_context_menu.py
+
+# 以下 5 个脚本需进版本库（README 部署步骤依赖，可复现）
+!add_to_startup.py
+!make_desktop_shortcut.py
+!make_reader_shortcut.py
+!register_context_menu.py
+!unregister_context_menu.py
