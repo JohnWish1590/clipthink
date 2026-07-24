@@ -1,6 +1,6 @@
 import winreg
 
-key_path = r"Software\Classes\*\shell\SendToWorkBuddy"
+key_path = r"Software\Classes\*\shell\SendToClipThink"
 
 try:
     winreg.DeleteKey(winreg.HKEY_CURRENT_USER, key_path + r"\command")

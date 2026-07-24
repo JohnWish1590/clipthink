@@ -1,4 +1,4 @@
-' 启动 WorkBuddy 热键监听器（无黑窗口）
+' 启动 剪思盒 热键监听器（无黑窗口）
 ' 目标：Alt+4 触发复制内容到 剪思盒
 
 Set WshShell = CreateObject("WScript.Shell")

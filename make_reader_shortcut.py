@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""在桌面创建「WorkBuddy 阅读器」快捷方式，指向 clipthink_reader.pyw（用 pythonw 静默运行）。"""
+"""在桌面创建「剪思盒 阅读器」快捷方式，指向 clipthink_reader.pyw（用 pythonw 静默运行）。"""
 import os
 import pythoncom
 from win32com.shell import shell, shellcon

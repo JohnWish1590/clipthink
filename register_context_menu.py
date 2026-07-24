@@ -5,10 +5,10 @@ USER = os.environ.get("USERNAME", "user")
 SENDER_DIR = r"C:\Users\%s\ClipThink" % USER
 SCRIPT = os.path.join(SENDER_DIR, "send_to_clipthink.ps1")
 
-key_path = r"Software\Classes\*\shell\SendToWorkBuddy"
+key_path = r"Software\Classes\*\shell\SendToClipThink"
 
 key = winreg.CreateKeyEx(winreg.HKEY_CURRENT_USER, key_path, 0, winreg.KEY_WRITE)
-winreg.SetValueEx(key, "", 0, winreg.REG_SZ, "发送到 WorkBuddy 分析")
+winreg.SetValueEx(key, "", 0, winreg.REG_SZ, "发送到 剪思盒 分析")
 winreg.SetValueEx(key, "Icon", 0, winreg.REG_SZ, r"C:\Windows\System32\imageres.dll,109")
 
 sub = winreg.CreateKeyEx(key, "command", 0, winreg.KEY_WRITE)

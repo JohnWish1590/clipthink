@@ -7,7 +7,7 @@ ScriptPath := "C:\Users\" . A_UserName . "\ClipThink\send_to_clipthink.ps1"
 
 ; 托盘图标菜单
 A_TrayMenu.Delete()
-A_TrayMenu.Add("发送剪贴板到 WorkBuddy", (*) => SendClip())
+A_TrayMenu.Add("发送剪贴板到 剪思盒", (*) => SendClip())
 A_TrayMenu.Add()
 A_TrayMenu.Add("退出", (*) => ExitApp())
 
@@ -19,5 +19,5 @@ A_TrayMenu.Add("退出", (*) => ExitApp())
 SendClip() {
     global ScriptPath
     Run('powershell.exe -WindowStyle Hidden -ExecutionPolicy Bypass -File "' ScriptPath '"')
-    TrayTip("已发送到 剪思盒", "WorkBuddy 会自动开一个分析任务", 2)
+    TrayTip("已发送到 剪思盒", "剪思盒 会自动开一个分析任务", 2)
 }
