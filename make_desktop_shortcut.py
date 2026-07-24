@@ -1,7 +1,6 @@
 # -*- coding: utf-8 -*-
-"""在桌面创建唯一快捷方式「剪思盒.lnk」，指向主程序 clipthink_sender.pyw（不带动作参数）。
-双击仅拉起托盘主程序（若已运行则聚焦已存在的托盘）；阅读器 / 收件箱在托盘右键菜单里点。
-（单程序模型：桌面只保留一个入口图标，不再有独立的阅读器快捷方式。）"""
+"""在桌面创建唯一快捷方式「剪思盒.lnk」，指向主程序 clipthink_sender.pyw 并带 --open-reader 参数。
+双击同时拉起托盘主程序 + 打开阅读器（半屏贴边）；阅读器/收件箱也可在托盘右键菜单里点。"""
 import os
 import sys
 
@@ -14,6 +13,7 @@ except ImportError:
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PYTHONW = r"C:\Users\user\.workbuddy\binaries\python\envs\shortcut\Scripts\pythonw.exe"
 SENDER = os.path.join(BASE_DIR, "clipthink_sender.pyw")
+ICO = os.path.join(BASE_DIR, "clipthink.ico")
 desktop = os.path.join(os.environ["USERPROFILE"], "Desktop")
 lnk = os.path.join(desktop, "剪思盒.lnk")
 
@@ -32,10 +32,12 @@ shortcut = pythoncom.CoCreateInstance(
     shell.IID_IShellLink,
 )
 shortcut.SetPath(PYTHONW)
-shortcut.SetArguments(f'"{SENDER}"')
+shortcut.SetArguments(f'"{SENDER}" --open-reader')
 shortcut.SetWorkingDirectory(BASE_DIR)
-shortcut.SetDescription("剪思盒 ClipThink - 双击启动（阅读器/收件箱在托盘右键菜单）")
-shortcut.SetIconLocation(r"C:\Windows\System32\imageres.dll", 109)
+shortcut.SetDescription("剪思盒 ClipThink - 双击启动托盘并打开阅读器")
+icon_path = ICO if os.path.exists(ICO) else r"C:\Windows\System32\imageres.dll"
+icon_idx = 0 if os.path.exists(ICO) else 109
+shortcut.SetIconLocation(icon_path, icon_idx)
 persist = shortcut.QueryInterface(pythoncom.IID_IPersistFile)
 persist.Save(lnk, 0)
 print("OK:" + lnk)

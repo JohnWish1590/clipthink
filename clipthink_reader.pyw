@@ -108,6 +108,20 @@ def split_analysis(text):
     analysis = parts[1].strip() if len(parts) > 1 else ""
     return original, analysis
 
+def _parse_send_time(name):
+    """从文件名 YYYYMMDD_HHMMSS[...].ext 解析发送时间；解析失败回退文件 mtime。"""
+    m = re.match(r"(\d{8}_\d{6})", os.path.basename(name))
+    if m:
+        try:
+            return int(datetime.datetime.strptime(m.group(1), "%Y%m%d_%H%M%S").timestamp())
+        except Exception:
+            pass
+    try:
+        return int(os.path.getmtime(os.path.join(INBOX, name)))
+    except Exception:
+        return 0
+
+
 def make_summary(original):
     lines = [l for l in original.splitlines() if l.strip()]
     for l in lines:
@@ -145,7 +159,7 @@ def list_items():
             "type": "image" if is_img else "text",
             "analyzed": analyzed,
             "summary": make_summary(original),
-            "time": int(os.path.getmtime(path)),
+            "time": _parse_send_time(f),
         })
     for f in files:
         low = f.lower()
@@ -156,7 +170,7 @@ def list_items():
                 "type": "image",
                 "analyzed": False,
                 "summary": "图片 · " + f,
-                "time": int(os.path.getmtime(path)),
+                "time": _parse_send_time(f),
             })
     items.sort(key=lambda x: x["time"], reverse=True)
     return items

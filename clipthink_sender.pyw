@@ -97,6 +97,7 @@ LOG_FILE = os.path.join(BASE_DIR, "log.txt")
 INBOX = r"C:\Users\user\ClipThinkInbox"
 SEND_SCRIPT = os.path.join(BASE_DIR, "send_clipboard.py")
 HOTKEY_FILE = os.path.join(BASE_DIR, "hotkey.json")
+CONFIG_FILE = os.path.join(BASE_DIR, "clipthink.json")
 DEFAULT_HOTKEY = "ALT+4"
 
 # ---------- 收件箱分析（WorkBuddy 本地 HTTP API / serve 实例）----------
@@ -384,6 +385,26 @@ MOD_WIN = 0x0008
 user32 = ctypes.windll.user32
 
 
+def _load_config():
+    """读取用户配置（阅读器位置、退出时是否关闭阅读器等）。"""
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8-sig") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def _save_config(cfg):
+    """保存用户配置。"""
+    try:
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        return True
+    except Exception as e:
+        log_err(f"保存配置失败：{e}")
+        return False
+
+
 def load_hotkey_combo():
     try:
         with open(HOTKEY_FILE, "r", encoding="utf-8-sig") as f:
@@ -530,6 +551,111 @@ READER_SCRIPT = os.path.join(BASE_DIR, "clipthink_reader.pyw")
 READER_URL = "http://127.0.0.1:8765/"
 
 
+# ---------- 阅读器窗口位置与退出行为（用户偏好） ----------
+def _screen_size():
+    """返回主屏幕宽、高（像素）。"""
+    user32 = ctypes.windll.user32
+    return user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
+
+
+def _reader_geometry(side="right"):
+    """按「半屏贴边」计算阅读器窗口尺寸与位置。side ∈ {'left','right'}。"""
+    sw, sh = _screen_size()
+    w = sw // 2
+    h = sh
+    if side == "left":
+        return w, h, 0, 0
+    return w, h, w, 0
+
+
+def _ask_choice(title, message, options, remember_default=True):
+    """弹出单选对话框。options=[(label, value),...]，返回 (value, remember)。"""
+    result = {"value": "", "remember": remember_default}
+    ev = threading.Event()
+
+    def _run():
+        root = tk.Tk()
+        root.title(title)
+        root.attributes("-topmost", True)
+        root.resizable(False, False)
+        tk.Label(root, text=message, wraplength=360, justify="left").pack(padx=20, pady=(14, 8))
+        var = tk.StringVar(value=result["value"])
+        for label, value in options:
+            tk.Radiobutton(root, text=label, variable=var, value=value, anchor="w").pack(fill="x", padx=20, pady=2)
+        rem = tk.BooleanVar(value=remember_default)
+        tk.Checkbutton(root, text="记住我的选择", variable=rem, anchor="w").pack(fill="x", padx=20, pady=(10, 0))
+
+        def _ok():
+            result["value"] = var.get()
+            result["remember"] = rem.get()
+            root.destroy()
+            ev.set()
+
+        def _cancel():
+            root.destroy()
+            ev.set()
+
+        tk.Button(root, text="确定", command=_ok, width=12).pack(pady=16)
+        root.protocol("WM_DELETE_WINDOW", _cancel)
+        root.mainloop()
+
+    threading.Thread(target=_run, daemon=True).start()
+    ev.wait(timeout=60)
+    return result["value"], result["remember"]
+
+
+def _ask_yes_no_remember(title, message, default_yes=True, remember_default=True):
+    """弹出带「记住选择」复选框的是/否对话框，返回 (yes, remember)。"""
+    result = {"yes": default_yes, "remember": remember_default}
+    ev = threading.Event()
+
+    def _run():
+        root = tk.Tk()
+        root.title(title)
+        root.attributes("-topmost", True)
+        root.resizable(False, False)
+        tk.Label(root, text=message, wraplength=360, justify="left").pack(padx=20, pady=(14, 8))
+        yes_var = tk.BooleanVar(value=default_yes)
+        rem_var = tk.BooleanVar(value=remember_default)
+        tk.Checkbutton(root, text="同时关闭阅读器", variable=yes_var, anchor="w").pack(fill="x", padx=20, pady=2)
+        tk.Checkbutton(root, text="记住我的选择", variable=rem_var, anchor="w").pack(fill="x", padx=20, pady=2)
+
+        def _ok():
+            result["yes"] = yes_var.get()
+            result["remember"] = rem_var.get()
+            root.destroy()
+            ev.set()
+
+        tk.Button(root, text="确定", command=_ok, width=12).pack(pady=16)
+        root.protocol("WM_DELETE_WINDOW", _ok)
+        root.mainloop()
+
+    threading.Thread(target=_run, daemon=True).start()
+    ev.wait(timeout=60)
+    return result["yes"], result["remember"]
+
+
+def _close_reader():
+    """通过 .reader.lock 中的 PID 结束阅读器进程。"""
+    reader_lock = os.path.join(BASE_DIR, ".reader.lock")
+    if not os.path.exists(reader_lock):
+        return
+    try:
+        pid = int(open(reader_lock, "r", encoding="utf-8").read().strip())
+    except Exception:
+        return
+    if not _pid_alive(pid):
+        return
+    kernel32 = ctypes.windll.kernel32
+    kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    h = kernel32.OpenProcess(0x0001, False, pid)  # PROCESS_TERMINATE
+    if h:
+        kernel32.TerminateProcess(h, 0)
+        kernel32.CloseHandle(h)
+        log_info(f"已结束阅读器进程 PID={pid}")
+
+
 def _default_browser():
     """探测默认浏览器，返回 (exe_path, brand)；brand ∈ {chrome, edge, firefox, other}。
     失败返回 (None, None)。"""
@@ -597,12 +723,29 @@ def _default_browser():
 
 def _open_reader_browser():
     """用默认浏览器打开纯净应用窗口：Chrome/Edge 用 --app=<url>（无地址栏/标签栏），
-    其它/探测失败降级为系统默认打开（塞入现有浏览器标签页或新窗口）。"""
+    并按用户偏好占主屏幕半屏贴左/右；其它/探测失败降级为系统默认打开。"""
     try:
         exe, brand = _default_browser()
+        cfg = _load_config()
+        side = cfg.get("reader_side")
+        if not side:
+            chosen, remember = _ask_choice(
+                "阅读器位置",
+                "阅读器窗口默认放在屏幕哪一侧？\n（后续可在托盘右键「设置」中修改）",
+                [("左侧", "left"), ("右侧", "right")],
+                remember_default=True,
+            )
+            side = chosen if chosen else "right"
+            if remember or True:  # 首次选择直接记住
+                cfg["reader_side"] = side
+                _save_config(cfg)
+        w, h, x, y = _reader_geometry(side)
         if exe and brand in ("chrome", "edge"):
-            subprocess.Popen([exe, f"--app={READER_URL}"], creationflags=CREATE_NO_WINDOW)
-            log_info(f"已用 {brand} 纯净应用窗口打开阅读器：{exe}")
+            subprocess.Popen(
+                [exe, f"--app={READER_URL}", f"--window-size={w},{h}", f"--window-position={x},{y}"],
+                creationflags=CREATE_NO_WINDOW,
+            )
+            log_info(f"已用 {brand} 纯净应用窗口打开阅读器：{exe}，位置={side} ({w}x{h}@{x},{y})")
             return True
         if exe and brand == "firefox":
             subprocess.Popen([exe, "--new-window", READER_URL], creationflags=CREATE_NO_WINDOW)
@@ -803,8 +946,50 @@ def analyze_inbox(icon, item):
                          kwargs={"kind": "err"}, daemon=True).start()
 
 
+def open_settings(icon, item):
+    """托盘菜单：设置阅读器位置与退出行为。"""
+    cfg = _load_config()
+    current_side = cfg.get("reader_side", "right")
+    chosen, _ = _ask_choice(
+        "剪思盒设置",
+        "阅读器窗口默认放在屏幕哪一侧？",
+        [("左侧", "left"), ("右侧", "right")],
+        remember_default=False,
+    )
+    if chosen:
+        cfg["reader_side"] = chosen
+    close_reader, _ = _ask_yes_no_remember(
+        "剪思盒设置",
+        "退出托盘时，是否同时关闭阅读器？",
+        default_yes=cfg.get("close_reader_on_exit", True),
+        remember_default=False,
+    )
+    cfg["close_reader_on_exit"] = close_reader
+    cfg["asked_close_reader"] = True
+    _save_config(cfg)
+    threading.Thread(target=show_toast, args=(f"设置已保存：阅读器在{'左' if cfg['reader_side']=='left' else '右'}侧，退出{'关闭' if close_reader else '不关闭'}阅读器",),
+                     kwargs={"dwell_ms": 2000}, daemon=True).start()
+
+
 def quit_app(icon, item):
     log_info("用户选择退出")
+    cfg = _load_config()
+    close_reader = cfg.get("close_reader_on_exit")
+    asked = cfg.get("asked_close_reader", False)
+    if close_reader is None or not asked:
+        yes, remember = _ask_yes_no_remember(
+            "退出剪思盒",
+            "退出托盘时，是否同时关闭阅读器？",
+            default_yes=True,
+            remember_default=True,
+        )
+        close_reader = yes
+        if remember:
+            cfg["close_reader_on_exit"] = close_reader
+            cfg["asked_close_reader"] = True
+            _save_config(cfg)
+    if close_reader:
+        _close_reader()
     try:
         icon.stop()
     except Exception:
@@ -865,6 +1050,8 @@ def main():
             MenuItem("打开运行日志", open_log),
             MenuItem("打开收件箱", open_inbox),
             MenuItem("打开阅读器", open_reader),
+            Menu.SEPARATOR,
+            MenuItem("设置", open_settings),
             MenuItem("退出", quit_app),
         ),
     )
