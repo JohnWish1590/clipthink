@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""在桌面创建「剪思盒」快捷方式，指向主程序 clipthink_sender.pyw 并带 --open-inbox 参数。
-双击即调起托盘主程序（若未运行则启动并显示托盘图标），由主程序打开收件箱。
-（单程序模型：阅读器与收件箱都通过主程序入口动作触发，不再各自独立启动。）"""
+"""在桌面创建唯一快捷方式「剪思盒.lnk」，指向主程序 clipthink_sender.pyw（不带动作参数）。
+双击仅拉起托盘主程序（若已运行则聚焦已存在的托盘）；阅读器 / 收件箱在托盘右键菜单里点。
+（单程序模型：桌面只保留一个入口图标，不再有独立的阅读器快捷方式。）"""
 import os
 import sys
 
@@ -32,9 +32,9 @@ shortcut = pythoncom.CoCreateInstance(
     shell.IID_IShellLink,
 )
 shortcut.SetPath(PYTHONW)
-shortcut.SetArguments(f'"{SENDER}" --open-inbox')
+shortcut.SetArguments(f'"{SENDER}"')
 shortcut.SetWorkingDirectory(BASE_DIR)
-shortcut.SetDescription("剪思盒 - 双击打开收件箱")
+shortcut.SetDescription("剪思盒 ClipThink - 双击启动（阅读器/收件箱在托盘右键菜单）")
 shortcut.SetIconLocation(r"C:\Windows\System32\imageres.dll", 109)
 persist = shortcut.QueryInterface(pythoncom.IID_IPersistFile)
 persist.Save(lnk, 0)

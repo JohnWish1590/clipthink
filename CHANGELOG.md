@@ -57,7 +57,32 @@
 
 ---
 
+## Release Notes（v1.0.5）
+
+> 本小节为 GitHub Release **v1.0.5** 的正文，供发布时直接引用。
+
+**剪思盒 ClipThink** v1.0.5 把桌面快捷方式合并为**唯一一个**「剪思盒」图标。
+
+**本次更新**
+- 桌面只保留一个快捷方式「剪思盒.lnk」，双击仅拉起托盘主程序（不再带 `--open-inbox` 之类的动作参数）；阅读器 / 收件箱改在托盘右键菜单里点。
+- 删除独立的「剪思盒阅读器.lnk」及其生成脚本 `make_reader_shortcut.py`，合并为单一入口，桌面不再有两个图标。
+
+**已验证**：三个脚本 `py_compile` 通过；桌面确认仅剩 `剪思盒.lnk` 一个 ClipThink 图标，目标为 `pythonw ...\clipthink_sender.pyw`（无动作参数）。
+
+**如何安装**：已安装用户 `git pull` 后手动删除桌面旧的「剪思盒阅读器.lnk」，并重新运行 `make_desktop_shortcut.py` 刷新「剪思盒.lnk」即可；托盘图标逻辑不变。
+
+---
+
 ## [Unreleased]
+
+## [1.0.5] - 2026-07-24
+
+### Changed
+- 桌面只保留一个快捷方式「剪思盒.lnk」，双击仅拉起托盘主程序（不带动作参数）；阅读器 / 收件箱改在托盘右键菜单里点。
+- 删除独立的「剪思盒阅读器.lnk」及生成脚本 `make_reader_shortcut.py`，合并为单一入口。
+
+### Notes
+- `clipthink_sender.pyw` 的 `--open-reader` / `--open-inbox` 参数与命令文件 IPC 机制保留（供脚本或后续调用），桌面快捷方式不再使用。
 
 ## [1.0.4] - 2026-07-24
 
