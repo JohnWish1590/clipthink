@@ -25,7 +25,33 @@
 
 ---
 
+## Release Notes（v1.0.3）
+
+> 本小节为 GitHub Release **v1.0.3** 的正文，供发布时直接引用。
+
+**剪思盒 ClipThink** v1.0.3 修复「托盘图标不显示 / 点击桌面快捷方式无反应」的问题。
+
+**本次更新**
+- 修复开机自启指向错误：启动文件夹的 `clipthink_sender.lnk` 原先指向废弃的 `clipthink_sender.ahk`（仅含 Alt+4 热键，不会拉起带托盘菜单的发送端），现已改为直接以 `pythonw` 启动 `clipthink_sender.pyw`，开机后托盘图标与「打开阅读器 / 打开收件箱」菜单正常可用。
+- 设置系统注册表 `TrayNotify\PromotedIcon1`，让托盘图标在通知区**常驻显示**，不再被 Windows 折叠进溢出区。
+
+**已验证**：本机重启发送端后日志显示「托盘图标已显示」；自启快捷方式目标已确认指向 `clipthink_sender.pyw`；注册表项已生效。
+
+**如何安装**：已安装的用户 `git pull` 后重新运行 `add_to_startup.py` 即可刷新自启项；托盘图标默认常驻，若仍在溢出区点击「^」即可看到。
+
+---
+
 ## [Unreleased]
+
+## [1.0.3] - 2026-07-24
+
+### Fixed
+- 修复开机自启指向错误：`clipthink_sender.lnk` 由废弃的 `clipthink_sender.ahk` 改为直接启动 `clipthink_sender.pyw`，开机后托盘菜单（打开阅读器 / 打开收件箱）正常可用。
+
+### Added
+- 设置 `TrayNotify\PromotedIcon1` 注册表，使托盘图标在通知区常驻显示，不再被折叠进溢出区。
+
+---
 
 ## [1.0.2] - 2026-07-23
 
